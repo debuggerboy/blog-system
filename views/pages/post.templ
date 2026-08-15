@@ -1,0 +1,27 @@
+package pages
+
+import (
+	"blog-system/internal/models"
+	"blog-system/internal/auth"
+	"blog-system/views/layouts"
+	"blog-system/views/components"
+)
+
+templ PostListPage(posts []models.Post, user *auth.UserContext) {
+	@layouts.Base("Posts", user) {
+		<div class="space-y-6">
+			<div class="flex justify-between items-center">
+				<h2 class="text-2xl font-bold text-gray-900">Posts</h2>
+				if user != nil {
+					<a href="/posts/new" 
+						class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">
+						Create New Post
+					</a>
+				}
+			</div>
+			<div id="posts-list">
+				@components.PostList(posts, user)
+			</div>
+		</div>
+	}
+}
