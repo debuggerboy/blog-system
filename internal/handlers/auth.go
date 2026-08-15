@@ -92,9 +92,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// For HTMX, redirect to home
+	// For HTMX, redirect to home - THIS IS THE KEY FIX
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
+	
+	// Return a simple response to let HTMX know it worked
+	w.Write([]byte("OK"))
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +152,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Redirect to home
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -308,4 +312,4 @@ func (h *AuthHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx := auth.SetUserInContext(r.Context(), userCtx)
 		next(w, r.WithContext(ctx))
 	}
-}
+	:}
