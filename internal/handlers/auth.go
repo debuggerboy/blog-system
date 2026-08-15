@@ -92,12 +92,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// For HTMX, redirect to home - THIS IS THE KEY FIX
+	// For HTMX, redirect to home - DO NOT write any body
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-
-	// Return a simple response to let HTMX know it worked
-	w.Write([]byte("OK"))
+	// No response body - just the headers and status
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -149,10 +147,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// Redirect to home
+	// Redirect to home - DO NOT write any body
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	// No response body
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -180,8 +178,10 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
+	// Redirect to login
 	w.Header().Set("HX-Redirect", "/login")
 	w.WriteHeader(http.StatusOK)
+	// No response body
 }
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
