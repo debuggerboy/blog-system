@@ -95,7 +95,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// For HTMX, redirect to home - THIS IS THE KEY FIX
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-	
+
 	// Return a simple response to let HTMX know it worked
 	w.Write([]byte("OK"))
 }
@@ -312,4 +312,4 @@ func (h *AuthHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx := auth.SetUserInContext(r.Context(), userCtx)
 		next(w, r.WithContext(ctx))
 	}
-	:}
+}
