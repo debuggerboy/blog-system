@@ -106,6 +106,15 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// Return only the form component, not the full layout
+		component := components.PostFormOnly(post, user)
+		component.Render(r.Context(), w)
+		return
+	}
+
+	// Full page for direct access
 	component := components.PostForm(post, user)
 	component.Render(r.Context(), w)
 }

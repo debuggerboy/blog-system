@@ -4,10 +4,11 @@ import (
 	"blog-system/internal/models"
 	"blog-system/internal/auth"
 	"blog-system/views/layouts"
+	"fmt"
 )
 
 templ PostCard(post models.Post, user *auth.UserContext) {
-	<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
+	<div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200" id={ fmt.Sprintf("post-%d", post.ID) }>
 		<div class="flex justify-between items-start">
 			<div class="flex-1">
 				<h3 class="text-xl font-bold text-gray-900">{ post.Title }</h3>
@@ -25,9 +26,25 @@ templ PostCard(post models.Post, user *auth.UserContext) {
 			</div>
 			if user != nil && (user.Role == "admin" || user.Role == "supervisor" || user.UserID == post.AuthorID) {
 				<div class="flex space-x-2">
-					<a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</a>
-					<a href="#" class="text-yellow-600 hover:text-yellow-800 text-sm font-medium">Toggle</a>
-					<a href="#" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</a>
+					<button hx-get={ fmt.Sprintf("/posts/%d/edit", post.ID) }
+							hx-target="#main-content"
+							hx-swap="outerHTML"
+							class="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer">
+						Edit
+					</button>
+					<button hx-post={ fmt.Sprintf("/posts/%d/toggle", post.ID) }
+							hx-target={ fmt.Sprintf("#post-%d", post.ID) }
+							hx-swap="outerHTML"
+							class="text-yellow-600 hover:text-yellow-800 text-sm font-medium cursor-pointer">
+						Toggle
+					</button>
+					<button hx-delete={ fmt.Sprintf("/posts/%d", post.ID) }
+							hx-confirm="Are you sure you want to delete this post?"
+							hx-target={ fmt.Sprintf("#post-%d", post.ID) }
+							hx-swap="delete"
+							class="text-red-600 hover:text-red-800 text-sm font-medium cursor-pointer">
+						Delete
+					</button>
 				</div>
 			}
 		</div>
@@ -47,37 +64,9 @@ templ PostList(posts []models.Post, user *auth.UserContext) {
 	</div>
 }
 
+// PostForm is for full page loads (when user visits /posts/new or /posts/{id}/edit directly)
 templ PostForm(post *models.Post, user *auth.UserContext) {
 	@layouts.Base("Edit Post", user) {
-		<div class="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-8">
-			<h2 class="text-2xl font-bold mb-6">Create New Post</h2>
-			<form hx-post="/posts/save" hx-target="#main-content" hx-swap="outerHTML" class="space-y-4">
-				<div>
-					<label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-					<input type="text" id="title" name="title" required
-						class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-				</div>
-				<div>
-					<label for="content" class="block text-sm font-medium text-gray-700">Content</label>
-					<textarea id="content" name="content" rows="8" required
-						class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-				</div>
-				<div>
-					<label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-					<select id="status" name="status"
-						class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-						<option value="published">Published</option>
-						<option value="disabled">Disabled</option>
-					</select>
-				</div>
-				<div class="flex justify-end space-x-4">
-					<a href="/posts" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-200">Cancel</a>
-					<button type="submit"
-						class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
-						Save Post
-					</button>
-				</div>
-			</form>
-		</div>
+		@PostFormOnly(post, user)
 	}
 }
