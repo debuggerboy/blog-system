@@ -26,8 +26,8 @@ COPY . .
 # Generate templ files
 RUN templ generate ./...
 
-# Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o blog-server cmd/server/main.go
+# Build the application with optimizations (smaller binary, faster build)
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o blog-server cmd/server/main.go
 
 # Final stage
 FROM alpine:latest
