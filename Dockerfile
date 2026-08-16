@@ -1,15 +1,21 @@
-# Build stage
-FROM golang:1.22-alpine AS builder
+# Build stage - using Go 1.25
+FROM golang:1.25-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git ca-certificates sqlite-dev
+RUN apk add --no-cache git ca-certificates sqlite-dev gcc musl-dev
 
 # Set working directory
 WORKDIR /app
 
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
-RUN go mod tidy
+
+# Set Go proxy for better reliability
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOSUMDB=sum.golang.org
+
+# Download dependencies
+RUN go mod download
 
 # Install templ
 RUN go install github.com/a-h/templ/cmd/templ@latest
