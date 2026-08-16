@@ -24,9 +24,9 @@ func (s *PostService) CreatePost(req *models.PostRequest, authorID int64) (*mode
 		Content:  req.Content,
 		AuthorID: authorID,
 		Status:   req.Status,
+		Pinned:   false, // Default to not pinned
 	}
 
-	// Default status to published if not set
 	if post.Status == "" {
 		post.Status = "published"
 	}
@@ -36,7 +36,6 @@ func (s *PostService) CreatePost(req *models.PostRequest, authorID int64) (*mode
 		return nil, err
 	}
 
-	// Fetch the post with author details
 	return s.postRepo.FindByID(post.ID)
 }
 
@@ -48,18 +47,20 @@ func (s *PostService) ListPosts(limit, offset int, userID int64, role string) ([
 	var filterStatus *string
 	var filterAuthorID *int64
 
-	// If user is not admin or supervisor, only show published posts
 	if role != "admin" && role != "supervisor" {
 		published := "published"
 		filterStatus = &published
 	}
 
-	// If user is regular user, only show their own posts
 	if role == "user" {
 		filterAuthorID = &userID
 	}
 
 	return s.postRepo.List(limit, offset, filterAuthorID, filterStatus)
+}
+
+func (s *PostService) GetLatestPosts(limit int) ([]models.Post, error) {
+	return s.postRepo.GetLatestPosts(limit)
 }
 
 func (s *PostService) GetUserPosts(authorID int64) ([]models.Post, error) {
@@ -75,7 +76,6 @@ func (s *PostService) UpdatePost(id int64, req *models.PostRequest, userID int64
 		return nil, errors.New("post not found")
 	}
 
-	// Check permissions
 	if role != "admin" && role != "supervisor" && post.AuthorID != userID {
 		return nil, errors.New("unauthorized to edit this post")
 	}
@@ -101,7 +101,6 @@ func (s *PostService) DeletePost(id int64, userID int64, role string) error {
 		return errors.New("post not found")
 	}
 
-	// Check permissions
 	if role != "admin" && role != "supervisor" && post.AuthorID != userID {
 		return errors.New("unauthorized to delete this post")
 	}
@@ -118,12 +117,10 @@ func (s *PostService) TogglePostStatus(id int64, userID int64, role string) (*mo
 		return nil, errors.New("post not found")
 	}
 
-	// Check permissions
 	if role != "admin" && role != "supervisor" && post.AuthorID != userID {
 		return nil, errors.New("unauthorized to modify this post")
 	}
 
-	// Toggle status
 	if post.Status == "published" {
 		post.Status = "disabled"
 	} else {

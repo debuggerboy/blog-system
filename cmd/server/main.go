@@ -3,7 +3,9 @@ package main
 import (
 	"blog-system/internal/auth"
 	"blog-system/internal/handlers"
+	"blog-system/internal/models"
 	"blog-system/internal/repository"
+	"blog-system/internal/service"
 	"blog-system/views/pages"
 	"log"
 	"net/http"
@@ -33,18 +35,7 @@ func main() {
 	// Create a new ServeMux
 	mux := http.NewServeMux()
 
-	// Home route - only register once
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		user := auth.GetUserFromContext(r)
-		component := pages.Home(user)
-		component.Render(r.Context(), w)
-	})
-
-	// Auth routes
+	// Auth routes - these should NOT have the auth middleware
 	mux.HandleFunc("GET /login", authHandler.LoginPage)
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("GET /register", authHandler.RegisterPage)
@@ -52,14 +43,28 @@ func main() {
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 	mux.HandleFunc("POST /refresh-token", authHandler.RefreshToken)
 
-	// User routes (protected)
-	mux.HandleFunc("GET /admin/users", authHandler.AuthMiddleware(userHandler.ListUsers))
-	mux.HandleFunc("GET /admin/users/{id}/edit", authHandler.AuthMiddleware(userHandler.EditUser))
-	mux.HandleFunc("POST /admin/users/update", authHandler.AuthMiddleware(userHandler.UpdateUser))
-	mux.HandleFunc("DELETE /admin/users/{id}", authHandler.AuthMiddleware(userHandler.DeleteUser))
-	mux.HandleFunc("POST /admin/users/{id}/toggle-status", authHandler.AuthMiddleware(userHandler.ToggleUserStatus))
+	// Home route - public
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		user := auth.GetUserFromContext(r)
 
-	// Post routes
+		// Get 5 latest posts
+		postService := service.NewPostService()
+		latestPosts, err := postService.GetLatestPosts(5)
+		if err != nil {
+			// Log error but continue with empty list
+			log.Printf("Error fetching latest posts: %v", err)
+			latestPosts = []models.Post{}
+		}
+
+		component := pages.Home(user, latestPosts)
+		component.Render(r.Context(), w)
+	})
+
+	// Posts routes - public for viewing, protected for write operations
 	mux.HandleFunc("GET /posts", postHandler.ListPosts)
 	mux.HandleFunc("GET /posts/new", authHandler.AuthMiddleware(postHandler.ShowCreateForm))
 	mux.HandleFunc("GET /posts/{id}/edit", authHandler.AuthMiddleware(postHandler.ShowEditForm))
@@ -67,9 +72,16 @@ func main() {
 	mux.HandleFunc("DELETE /posts/{id}", authHandler.AuthMiddleware(postHandler.DeletePost))
 	mux.HandleFunc("POST /posts/{id}/toggle", authHandler.AuthMiddleware(postHandler.TogglePostStatus))
 
-	// Middleware for all routes to add user context from cookies
-	handler := func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+	// User routes (protected - admin only)
+	mux.HandleFunc("GET /admin/users", authHandler.AuthMiddleware(userHandler.ListUsers))
+	mux.HandleFunc("GET /admin/users/{id}/edit", authHandler.AuthMiddleware(userHandler.EditUser))
+	mux.HandleFunc("POST /admin/users/update", authHandler.AuthMiddleware(userHandler.UpdateUser))
+	mux.HandleFunc("DELETE /admin/users/{id}", authHandler.AuthMiddleware(userHandler.DeleteUser))
+	mux.HandleFunc("POST /admin/users/{id}/toggle-status", authHandler.AuthMiddleware(userHandler.ToggleUserStatus))
+
+	// Middleware for all routes to add user context from cookies (but NOT to intercept requests)
+	handler := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Try to get user from access token cookie
 			cookie, err := r.Cookie("access_token")
 			if err == nil {
@@ -82,18 +94,15 @@ func main() {
 						Role:     claims.Role,
 					}
 					ctx := auth.SetUserInContext(r.Context(), userCtx)
-					next(w, r.WithContext(ctx))
-					return
+					r = r.WithContext(ctx)
 				}
 			}
-			next(w, r)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 
-	// Wrap the mux with the auth middleware
-	http.Handle("/", handler(func(w http.ResponseWriter, r *http.Request) {
-		mux.ServeHTTP(w, r)
-	}))
+	// Wrap the mux with the context middleware
+	http.Handle("/", handler(mux))
 
 	port := os.Getenv("PORT")
 	if port == "" {

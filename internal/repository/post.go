@@ -16,11 +16,11 @@ func NewPostRepository() *PostRepository {
 
 func (r *PostRepository) Create(post *models.Post) error {
 	query := `
-		INSERT INTO posts (title, content, author_id, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO posts (title, content, author_id, status, pinned, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 	result, err := r.db.Exec(query, post.Title, post.Content, post.AuthorID,
-		post.Status, time.Now(), time.Now())
+		post.Status, post.Pinned, time.Now(), time.Now())
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func (r *PostRepository) Create(post *models.Post) error {
 
 func (r *PostRepository) FindByID(id int64) (*models.Post, error) {
 	query := `
-		SELECT p.id, p.title, p.content, p.author_id, p.status, p.created_at, p.updated_at,
+		SELECT p.id, p.title, p.content, p.author_id, p.status, p.pinned, p.created_at, p.updated_at,
 			   u.id, u.username, u.email, u.role, u.status
 		FROM posts p
 		LEFT JOIN users u ON p.author_id = u.id
@@ -46,7 +46,7 @@ func (r *PostRepository) FindByID(id int64) (*models.Post, error) {
 	var post models.Post
 	var user models.User
 	err := row.Scan(&post.ID, &post.Title, &post.Content, &post.AuthorID,
-		&post.Status, &post.CreatedAt, &post.UpdatedAt,
+		&post.Status, &post.Pinned, &post.CreatedAt, &post.UpdatedAt,
 		&user.ID, &user.Username, &user.Email, &user.Role, &user.Status)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -60,7 +60,7 @@ func (r *PostRepository) FindByID(id int64) (*models.Post, error) {
 
 func (r *PostRepository) List(limit, offset int, filterAuthorID *int64, filterStatus *string) ([]models.Post, error) {
 	query := `
-		SELECT p.id, p.title, p.content, p.author_id, p.status, p.created_at, p.updated_at,
+		SELECT p.id, p.title, p.content, p.author_id, p.status, p.pinned, p.created_at, p.updated_at,
 			   u.id, u.username, u.email, u.role, u.status
 		FROM posts p
 		LEFT JOIN users u ON p.author_id = u.id
@@ -78,7 +78,7 @@ func (r *PostRepository) List(limit, offset int, filterAuthorID *int64, filterSt
 		args = append(args, *filterStatus)
 	}
 
-	query += " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"
+	query += " ORDER BY p.pinned DESC, p.created_at DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -92,7 +92,7 @@ func (r *PostRepository) List(limit, offset int, filterAuthorID *int64, filterSt
 		var post models.Post
 		var user models.User
 		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt,
+			&post.Status, &post.Pinned, &post.CreatedAt, &post.UpdatedAt,
 			&user.ID, &user.Username, &user.Email, &user.Role, &user.Status)
 		if err != nil {
 			return nil, err
@@ -103,16 +103,43 @@ func (r *PostRepository) List(limit, offset int, filterAuthorID *int64, filterSt
 	return posts, nil
 }
 
-func (r *PostRepository) Count() (int, error) {
-	query := `SELECT COUNT(*) FROM posts`
-	var count int
-	err := r.db.QueryRow(query).Scan(&count)
-	return count, err
+// GetLatestPosts - Get the 5 most recent posts (pinned first, then by created date)
+// GetLatestPosts - Get the 5 most recent posts (pinned first, then by created date)
+func (r *PostRepository) GetLatestPosts(limit int) ([]models.Post, error) {
+	query := `
+		SELECT p.id, p.title, p.content, p.author_id, p.status, p.pinned, p.created_at, p.updated_at,
+			   u.id, u.username, u.email, u.role, u.status
+		FROM posts p
+		LEFT JOIN users u ON p.author_id = u.id
+		WHERE p.status = 'published'
+		ORDER BY p.pinned DESC, p.created_at DESC
+		LIMIT ?
+	`
+	rows, err := r.db.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []models.Post
+	for rows.Next() {
+		var post models.Post
+		var user models.User
+		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.AuthorID,
+			&post.Status, &post.Pinned, &post.CreatedAt, &post.UpdatedAt,
+			&user.ID, &user.Username, &user.Email, &user.Role, &user.Status)
+		if err != nil {
+			return nil, err
+		}
+		post.Author = user
+		posts = append(posts, post)
+	}
+	return posts, nil
 }
 
 func (r *PostRepository) Update(post *models.Post) error {
-	query := `UPDATE posts SET title = ?, content = ?, status = ?, updated_at = ? WHERE id = ?`
-	_, err := r.db.Exec(query, post.Title, post.Content, post.Status, time.Now(), post.ID)
+	query := `UPDATE posts SET title = ?, content = ?, status = ?, pinned = ?, updated_at = ? WHERE id = ?`
+	_, err := r.db.Exec(query, post.Title, post.Content, post.Status, post.Pinned, time.Now(), post.ID)
 	return err
 }
 
@@ -124,12 +151,12 @@ func (r *PostRepository) Delete(id int64) error {
 
 func (r *PostRepository) ListByAuthor(authorID int64, limit, offset int) ([]models.Post, error) {
 	query := `
-		SELECT p.id, p.title, p.content, p.author_id, p.status, p.created_at, p.updated_at,
+		SELECT p.id, p.title, p.content, p.author_id, p.status, p.pinned, p.created_at, p.updated_at,
 			   u.id, u.username, u.email, u.role, u.status
 		FROM posts p
 		LEFT JOIN users u ON p.author_id = u.id
 		WHERE p.author_id = ?
-		ORDER BY p.created_at DESC
+		ORDER BY p.pinned DESC, p.created_at DESC
 		LIMIT ? OFFSET ?
 	`
 	rows, err := r.db.Query(query, authorID, limit, offset)
@@ -143,7 +170,7 @@ func (r *PostRepository) ListByAuthor(authorID int64, limit, offset int) ([]mode
 		var post models.Post
 		var user models.User
 		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt,
+			&post.Status, &post.Pinned, &post.CreatedAt, &post.UpdatedAt,
 			&user.ID, &user.Username, &user.Email, &user.Role, &user.Status)
 		if err != nil {
 			return nil, err

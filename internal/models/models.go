@@ -22,6 +22,7 @@ type Post struct {
 	AuthorID  int64     `json:"author_id"`
 	Author    User      `json:"author,omitempty"`
 	Status    string    `json:"status"` // published, disabled
+	Pinned    bool      `json:"pinned"` // true if pinned
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -62,16 +63,4 @@ type PostRequest struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
 	Status  string `json:"status"`
-}
-
-type Post struct {
-	ID        int64     `json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	AuthorID  int64     `json:"author_id"`
-	Author    User      `json:"author,omitempty"`
-	Status    string    `json:"status"` // published, disabled
-	Pinned    bool      `json:"pinned"` // true if pinned
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
