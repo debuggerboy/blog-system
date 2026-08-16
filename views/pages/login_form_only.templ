@@ -1,0 +1,39 @@
+package pages
+
+templ LoginFormOnly(errorMessage string) {
+	<div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8" id="login-container">
+		<h2 class="text-2xl font-bold text-center mb-6">Login</h2>
+		
+		if errorMessage != "" {
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+				{ errorMessage }
+			</div>
+		}
+		
+		<form hx-post="/login" 
+			  hx-target="#login-container" 
+			  hx-swap="outerHTML" 
+			  hx-trigger="submit"
+			  class="space-y-4">
+			<div>
+				<label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+				<input type="text" id="username" name="username" required 
+						class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+			</div>
+			<div>
+				<label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+				<input type="password" id="password" name="password" required
+						class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+			</div>
+			<div>
+				<button type="submit" 
+						class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200">
+					Login
+				</button>
+			</div>
+			<p class="text-center text-sm text-gray-600">
+				Don't have an account? <a href="/register" class="text-blue-600 hover:underline">Register</a>
+			</p>
+		</form>
+	</div>
+}

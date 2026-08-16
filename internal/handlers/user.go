@@ -33,6 +33,14 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// Return only the user list table, not the full layout
+		component := pages.UserListOnly(users, user)
+		component.Render(r.Context(), w)
+		return
+	}
+
 	component := pages.UserList(users, user)
 	component.Render(r.Context(), w)
 }
@@ -63,6 +71,15 @@ func (h *UserHandler) EditUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// Return only the form component, not the full layout
+		component := pages.UserFormOnly(targetUser, user)
+		component.Render(r.Context(), w)
+		return
+	}
+
+	// Full page for direct access
 	component := pages.UserEditForm(targetUser, user)
 	component.Render(r.Context(), w)
 }
@@ -108,8 +125,9 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Redirect to user list
+	// Redirect to user list with HX-Refresh to force full page reload
 	w.Header().Set("HX-Redirect", "/admin/users")
+	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
 }
 

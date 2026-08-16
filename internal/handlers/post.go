@@ -6,9 +6,9 @@ import (
 	"blog-system/internal/service"
 	"blog-system/views/components"
 	"blog-system/views/pages"
-	"strconv"
-
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type PostHandler struct {
@@ -27,7 +27,6 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	offset := 0
 
-	// Get pagination params
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
@@ -53,7 +52,6 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if HTMX request
 	if r.Header.Get("HX-Request") == "true" {
 		component := components.PostList(posts, user)
 		component.Render(r.Context(), w)
@@ -68,6 +66,12 @@ func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	user := auth.GetUserFromContext(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		component := components.PostFormOnly(nil, user)
+		component.Render(r.Context(), w)
 		return
 	}
 
@@ -100,68 +104,82 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check permissions
 	if user.Role != "admin" && user.Role != "supervisor" && post.AuthorID != user.UserID {
 		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
-	// Check if HTMX request
 	if r.Header.Get("HX-Request") == "true" {
-		// Return only the form component, not the full layout
 		component := components.PostFormOnly(post, user)
 		component.Render(r.Context(), w)
 		return
 	}
 
-	// Full page for direct access
 	component := components.PostForm(post, user)
 	component.Render(r.Context(), w)
 }
 
 func (h *PostHandler) SavePost(w http.ResponseWriter, r *http.Request) {
+	log.Println("SavePost called")
+
 	user := auth.GetUserFromContext(r)
 	if user == nil {
+		log.Println("User not authenticated")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Error parsing form: %v", err)
+		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		return
+	}
+
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	status := r.FormValue("status")
+	idStr := r.FormValue("id")
+
+	log.Printf("Form values - Title: %s, Content: %s, Status: %s, ID: %s", title, content, status, idStr)
+
 	req := &models.PostRequest{
-		Title:   r.FormValue("title"),
-		Content: r.FormValue("content"),
-		Status:  r.FormValue("status"),
+		Title:   title,
+		Content: content,
+		Status:  status,
 	}
 
 	if req.Status == "" {
 		req.Status = "published"
 	}
 
-	idStr := r.FormValue("id")
 	var post *models.Post
 	var err error
 
 	if idStr != "" {
-		// Update existing post
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			log.Printf("Invalid post ID: %v", err)
 			http.Error(w, "Invalid post ID", http.StatusBadRequest)
 			return
 		}
+		log.Printf("Updating post ID: %d", id)
 		post, err = h.postService.UpdatePost(id, req, user.UserID, user.Role)
 	} else {
-		// Create new post
+		log.Println("Creating new post")
 		post, err = h.postService.CreatePost(req, user.UserID)
 	}
 
 	if err != nil {
+		log.Printf("Error saving post: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	_ = post // Mark as used
+	log.Printf("Post saved successfully with ID: %d", post.ID)
 
-	// Redirect to post list
+	// Redirect to posts page with HX-Refresh to force full page reload
 	w.Header().Set("HX-Redirect", "/posts")
+	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -218,7 +236,6 @@ func (h *PostHandler) TogglePostStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return updated post card
 	component := components.PostCard(*post, user)
 	component.Render(r.Context(), w)
 }

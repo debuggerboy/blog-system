@@ -91,7 +91,7 @@ func Base(title string, user *auth.UserContext) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, ")</span><form hx-post=\"/logout\" hx-target=\"#main-content\" hx-swap=\"outerHTML\"><button type=\"submit\" class=\"text-red-600 hover:text-red-800\">Logout</button></form>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, ")</span><form action=\"/logout\" method=\"POST\" hx-post=\"/logout\" hx-trigger=\"submit\" hx-headers='{\"HX-Request\": \"true\"}'><button type=\"submit\" class=\"text-red-600 hover:text-red-800\">Logout</button></form>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

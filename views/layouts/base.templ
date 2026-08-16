@@ -30,7 +30,7 @@ templ Base(title string, user *auth.UserContext) {
 							if user != nil {
 								<span class="text-gray-700">Welcome, { user.Username }</span>
 								<span class="text-sm text-gray-500">({ user.Role })</span>
-								<form hx-post="/logout" hx-target="#main-content" hx-swap="outerHTML">
+								<form action="/logout" method="POST" hx-post="/logout" hx-trigger="submit" hx-headers='{"HX-Request": "true"}'>
 									<button type="submit" class="text-red-600 hover:text-red-800">Logout</button>
 								</form>
 							} else {

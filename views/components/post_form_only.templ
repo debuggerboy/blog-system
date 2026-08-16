@@ -21,7 +21,7 @@ func getContent(post *models.Post) string {
 }
 
 templ PostFormOnly(post *models.Post, user *auth.UserContext) {
-	<div class="max-w-7xl mx-auto px-4 py-8">
+	<div class="max-w-7xl mx-auto px-4 py-8" id="post-form-container">
 		<div class="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-8">
 			<h2 class="text-2xl font-bold mb-6">
 				if post != nil && post.ID > 0 {
@@ -31,7 +31,11 @@ templ PostFormOnly(post *models.Post, user *auth.UserContext) {
 				}
 			</h2>
 			
-			<form hx-post="/posts/save" hx-target="#main-content" hx-swap="outerHTML" class="space-y-4">
+			<form hx-post="/posts/save" 
+				  hx-target="#post-form-container" 
+				  hx-swap="outerHTML" 
+				  hx-trigger="submit"
+				  class="space-y-4">
 				if post != nil && post.ID > 0 {
 					<input type="hidden" name="id" value={ strconv.FormatInt(post.ID, 10) }/>
 				}
@@ -69,7 +73,7 @@ templ PostFormOnly(post *models.Post, user *auth.UserContext) {
 				<div class="flex justify-end space-x-4">
 					<button hx-get="/posts" hx-target="#main-content" hx-swap="outerHTML" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-200">Cancel</button>
 					<button type="submit"
-							class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200">
+							class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 cursor-pointer">
 						Save Post
 					</button>
 				</div>

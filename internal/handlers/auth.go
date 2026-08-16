@@ -6,6 +6,7 @@ import (
 	"blog-system/internal/service"
 	"blog-system/views/pages"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -48,22 +49,34 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	req.Username = r.FormValue("username")
 	req.Password = r.FormValue("password")
 
+	log.Printf("Login attempt: username=%s", req.Username)
+
 	// Check if this is a JSON request
 	isJSON := strings.Contains(r.Header.Get("Accept"), "application/json")
 
 	tokens, user, err := h.authService.Login(&req)
 	if err != nil {
+		log.Printf("Login error: %v", err)
 		if isJSON {
 			writeJSONError(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		// For HTMX, render login with error
+
+		// Check if HTMX request
+		if r.Header.Get("HX-Request") == "true" {
+			// For HTMX, return only the login form with error message
+			component := pages.LoginFormOnly("Invalid username or password")
+			component.Render(r.Context(), w)
+			return
+		}
+
+		// Full page for direct access
 		component := pages.Login(nil)
 		component.Render(r.Context(), w)
 		return
 	}
 
-	_ = user // Mark as used
+	log.Printf("Login successful for user: %s, role: %s", user.Username, user.Role)
 
 	if isJSON {
 		w.Header().Set("Content-Type", "application/json")
@@ -71,14 +84,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set both tokens as cookies (refresh token as HTTP-only cookie)
+	// Set both tokens as cookies
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    tokens.AccessToken,
 		Path:     "/",
-		MaxAge:   900, // 15 minutes
+		MaxAge:   900,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -86,16 +99,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
 		Path:     "/",
-		MaxAge:   604800, // 7 days
+		MaxAge:   604800,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// For HTMX, redirect to home - DO NOT write any body
+	// For HTMX, redirect to home
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-	// No response body - just the headers and status
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -106,10 +118,17 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.authService.Register(req)
-	_ = user // Mark as used
+	_ = user
 
 	if err != nil {
-		// Render register page with error
+		// Check if HTMX request
+		if r.Header.Get("HX-Request") == "true" {
+			// For HTMX, return only the register form with error message
+			component := pages.RegisterFormOnly(err.Error())
+			component.Render(r.Context(), w)
+			return
+		}
+		// Full page for direct access
 		component := pages.Register(nil)
 		component.Render(r.Context(), w)
 		return
@@ -121,6 +140,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Password: req.Password,
 	})
 	if err != nil {
+		if r.Header.Get("HX-Request") == "true" {
+			component := pages.RegisterFormOnly("Registration successful but login failed. Please try logging in.")
+			component.Render(r.Context(), w)
+			return
+		}
 		component := pages.Register(nil)
 		component.Render(r.Context(), w)
 		return
@@ -147,10 +171,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// Redirect to home - DO NOT write any body
+	// Redirect to home
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-	// No response body
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -178,10 +201,10 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// Redirect to login
+	// For HTMX, redirect to login with a full page refresh
 	w.Header().Set("HX-Redirect", "/login")
+	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
-	// No response body
 }
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {

@@ -46,7 +46,7 @@ func Login(user *auth.UserContext) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-md mx-auto bg-white rounded-lg shadow-md p-8\"><h2 class=\"text-2xl font-bold text-center mb-6\">Login</h2><form hx-post=\"/login\" hx-target=\"#main-content\" hx-swap=\"outerHTML\" class=\"space-y-4\"><div><label for=\"username\" class=\"block text-sm font-medium text-gray-700\">Username</label> <input type=\"text\" id=\"username\" name=\"username\" required class=\"mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500\"></div><div><label for=\"password\" class=\"block text-sm font-medium text-gray-700\">Password</label> <input type=\"password\" id=\"password\" name=\"password\" required class=\"mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500\"></div><div><button type=\"submit\" class=\"w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200\">Login</button></div><p class=\"text-center text-sm text-gray-600\">Don't have an account? <a href=\"/register\" class=\"text-blue-600 hover:underline\">Register</a></p></form></div>")
+			templ_7745c5c3_Err = LoginFormOnly("").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -93,7 +93,7 @@ func Register(user *auth.UserContext) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"max-w-md mx-auto bg-white rounded-lg shadow-md p-8\"><h2 class=\"text-2xl font-bold text-center mb-6\">Register</h2><form hx-post=\"/register\" hx-target=\"#main-content\" hx-swap=\"outerHTML\" class=\"space-y-4\"><div><label for=\"username\" class=\"block text-sm font-medium text-gray-700\">Username</label> <input type=\"text\" id=\"username\" name=\"username\" required class=\"mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500\"></div><div><label for=\"email\" class=\"block text-sm font-medium text-gray-700\">Email</label> <input type=\"email\" id=\"email\" name=\"email\" required class=\"mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500\"></div><div><label for=\"password\" class=\"block text-sm font-medium text-gray-700\">Password</label> <input type=\"password\" id=\"password\" name=\"password\" required minlength=\"6\" class=\"mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500\"></div><div><button type=\"submit\" class=\"w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200\">Register</button></div><p class=\"text-center text-sm text-gray-600\">Already have an account? <a href=\"/login\" class=\"text-blue-600 hover:underline\">Login</a></p></form></div>")
+			templ_7745c5c3_Err = RegisterFormOnly("").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
