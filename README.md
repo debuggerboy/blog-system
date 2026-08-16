@@ -353,6 +353,54 @@ go run cmd/server/main.go
 # Login: admin / admin123
 ```
 
+## Docker
+
+### Build the image
+
+```bash
+# Build the Docker image
+docker build -t blog-system .
+
+# Or with a specific tag
+docker build -t blog-system:latest .
+```
+
+
+### Run the container
+
+```bash
+# Run with environment variables
+docker run -p 8080:8080 \
+  -e JWT_SECRET=your-secret-key \
+  -v $(pwd)/data:/app/data \
+  blog-system
+
+# Run with docker-compose
+docker-compose up -d
+```
+
+## Manage Blog System Docker container
+
+```bash
+# List running containers
+docker ps
+
+# View logs
+docker logs blog-system
+
+# Stop the container
+docker stop blog-system
+
+# Remove the container
+docker rm blog-system
+
+# Remove the image
+docker rmi blog-system
+
+# Build without cache
+docker build --no-cache -t blog-system .
+```
+
 ## Support
 
 For issues and questions, please open an issue on GitHub or contact the maintainers.
